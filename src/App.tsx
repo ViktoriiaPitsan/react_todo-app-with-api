@@ -15,6 +15,7 @@ import { getFilteredTodos, Todo } from './types/Todo';
 import { useError } from './hooks/useError';
 import { TodoCreate } from './types/TodoCreate';
 import { TodoCreateForm } from './components/TodoCreateForm';
+import { TodoList } from './components/TodoList';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -241,21 +242,16 @@ export const App: React.FC = () => {
         </header>
 
         {filteredTodos.length !== 0 && (
-          <section className="todoapp__main" data-cy="TodoList">
-            {filteredTodos.map(todo => (
-              <TodoItem
-                key={todo.id}
-                todo={todo}
-                isLoading={getIsTodoLoading(todo.id)}
-                onDelete={handleDeleteTodo}
-                onToggleStatus={handleToggleStatus}
-                onSaveTitle={handleSaveTitle}
-              />
-            ))}
-
-            {tempTodo && <TodoItem todo={tempTodo} isLoading />}
-          </section>
+          <TodoList
+            todos={filteredTodos}
+            isLoading={getIsTodoLoading}
+            onDelete={handleDeleteTodo}
+            onToggleStatus={handleToggleStatus}
+            onSaveTitle={handleSaveTitle}
+          />
         )}
+
+        {tempTodo && <TodoItem todo={tempTodo} isLoading />}
 
         {todos.length !== 0 && (
           <footer className="todoapp__footer" data-cy="Footer">
