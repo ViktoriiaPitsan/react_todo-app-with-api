@@ -10,12 +10,13 @@ import {
 } from './api/todos';
 import cn from 'classnames';
 import { TodoItem } from './components/TodoItem';
-import { TODO_STATUS_FILTER_OPTIONS, Status } from './types/TodoStatusFilter';
+import { Status } from './types/TodoStatusFilter';
 import { getFilteredTodos, Todo } from './types/Todo';
 import { useError } from './hooks/useError';
 import { TodoCreate } from './types/TodoCreate';
-import { TodoCreateForm } from './components/TodoCreateForm';
 import { TodoList } from './components/TodoList';
+import { Header } from './components/TodoHeader';
+import { Footer } from './components/TodoFooter';
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -222,24 +223,14 @@ export const App: React.FC = () => {
       <h1 className="todoapp__title">todos</h1>
 
       <div className="todoapp__content">
-        <header className="todoapp__header">
-          {todos.length > 0 && (
-            <button
-              type="button"
-              className={cn('todoapp__toggle-all', {
-                active: allTodosCompleted,
-              })}
-              data-cy="ToggleAllButton"
-              onClick={handleToggleAll}
-            />
-          )}
-
-          <TodoCreateForm
-            ref={todoTitleInputRef}
-            onSubmit={handleAddTodo}
-            onError={handleSetError}
-          />
-        </header>
+        <Header
+          onToggleAll={handleToggleAll}
+          allTodosCompleted={allTodosCompleted}
+          onAddTodo={handleAddTodo}
+          onError={handleSetError}
+          todoTitleInputRef={todoTitleInputRef}
+          hasTodos={todos.length > 0}
+        />
 
         {filteredTodos.length !== 0 && (
           <TodoList
@@ -254,42 +245,12 @@ export const App: React.FC = () => {
         {tempTodo && <TodoItem todo={tempTodo} isLoading />}
 
         {todos.length !== 0 && (
-          <footer className="todoapp__footer" data-cy="Footer">
-            <span className="todo-count" data-cy="TodosCounter">
-              {todos.filter(todo => !todo.completed).length} items left
-            </span>
-
-            <nav className="filter" data-cy="Filter">
-              {Object.entries(TODO_STATUS_FILTER_OPTIONS).map(
-                ([option, { href, testId, text }]) => (
-                  <a
-                    key={testId}
-                    href={href}
-                    className={cn('filter__link', {
-                      selected: selectedStatus === option,
-                    })}
-                    data-cy={testId}
-                    onClick={event => {
-                      event.preventDefault();
-                      setSelectedStatus(option as Status);
-                    }}
-                  >
-                    {text}
-                  </a>
-                ),
-              )}
-            </nav>
-
-            <button
-              type="button"
-              className="todoapp__clear-completed"
-              data-cy="ClearCompletedButton"
-              disabled={!completedTodos.length}
-              onClick={handleDeleteCompleted}
-            >
-              Clear completed
-            </button>
-          </footer>
+          <Footer
+            todos={todos}
+            selectedStatus={selectedStatus}
+            setSelectedStatus={setSelectedStatus}
+            handleDeleteCompleted={handleDeleteCompleted}
+          />
         )}
       </div>
 
