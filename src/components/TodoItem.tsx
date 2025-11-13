@@ -17,16 +17,16 @@ export const TodoItem: React.FC<Props> = ({
   onToggleStatus,
   onSaveTitle,
 }) => {
-  const [editing, setEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(todo.title);
 
   const handleDoubleClick = () => {
     setNewTitle(todo.title);
-    setEditing(true);
+    setIsEditing(true);
   };
 
   const handleCancel = () => {
-    setEditing(false);
+    setIsEditing(false);
     setNewTitle(todo.title);
   };
 
@@ -47,7 +47,6 @@ export const TodoItem: React.FC<Props> = ({
       try {
         if (onDelete) {
           await onDelete(todo.id);
-          setEditing(false);
         }
       } catch (error) {}
 
@@ -55,7 +54,7 @@ export const TodoItem: React.FC<Props> = ({
     }
 
     if (trimmedTitle === todo.title) {
-      setEditing(false);
+      setIsEditing(false);
 
       return;
     }
@@ -63,7 +62,7 @@ export const TodoItem: React.FC<Props> = ({
     try {
       if (onSaveTitle) {
         await onSaveTitle(todo.id, trimmedTitle);
-        setEditing(false);
+        setIsEditing(false);
       }
     } catch (error) {}
   };
@@ -93,11 +92,11 @@ export const TodoItem: React.FC<Props> = ({
           className="todo__status"
           checked={todo.completed}
           onChange={() => onToggleStatus && onToggleStatus(todo.id)}
-          disabled={isLoading || editing}
+          disabled={isLoading || isEditing}
         />
       </label>
 
-      {editing ? (
+      {isEditing ? (
         <form onSubmit={handleSaveSubmit}>
           <input
             data-cy="TodoTitleField"

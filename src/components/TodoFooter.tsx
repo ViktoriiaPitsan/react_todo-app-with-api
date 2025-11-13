@@ -1,6 +1,7 @@
 import React from 'react';
 import cn from 'classnames';
-import { Status, TODO_STATUS_FILTER_OPTIONS } from '../types/TodoStatusFilter';
+import { Status } from '../types/TodoStatusFilter';
+import { TODO_STATUS_FILTER_OPTIONS } from '../utils/filterOptions';
 import { Todo } from '../types/Todo';
 
 type Props = {

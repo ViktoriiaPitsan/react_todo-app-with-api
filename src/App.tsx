@@ -11,10 +11,11 @@ import {
 import cn from 'classnames';
 import { TodoItem } from './components/TodoItem';
 import { Status } from './types/TodoStatusFilter';
-import { getFilteredTodos, Todo } from './types/Todo';
+import { Todo } from './types/Todo';
 import { useError } from './hooks/useError';
 import { TodoCreate } from './types/TodoCreate';
 import { TodoList } from './components/TodoList';
+import { getFilteredTodos } from './utils/todoUtils';
 import { Header } from './components/TodoHeader';
 import { Footer } from './components/TodoFooter';
 
@@ -40,11 +41,7 @@ export const App: React.FC = () => {
     );
   };
 
-  const getIsTodoLoading = (todoId: Todo['id']) => {
-    return loadingTodoIds.includes(todoId);
-  };
-
-  const handleToggleStatus = (todoId: Todo['id']) => {
+  const handleToggleStatus = async (todoId: Todo['id']) => {
     const todoToToggle = todos.find(todo => todo.id === todoId);
 
     if (!todoToToggle) {
@@ -53,48 +50,41 @@ export const App: React.FC = () => {
 
     handleAddTodoToLoading(todoId);
 
-    todosService
-      .updateTodoStatus(todoId, { completed: !todoToToggle.completed })
-      .then(() => {
-        setTodos(currentTodos =>
-          currentTodos.map(todo =>
-            todo.id === todoId ? { ...todo, completed: !todo.completed } : todo,
-          ),
-        );
-      })
-      .catch(() => {
-        handleSetError(
-          todosServiceErrorText[TodosServiceErrors.UNABLE_TO_UPDATE_A_TODO],
-        );
-      })
-      .finally(() => {
-        handleRemoveTodoFromLoading(todoId);
+    try {
+      await todosService.updateTodoStatus(todoId, {
+        completed: !todoToToggle.completed,
       });
+      setTodos(currentTodos =>
+        currentTodos.map(todo =>
+          todo.id === todoId ? { ...todo, completed: !todo.completed } : todo,
+        ),
+      );
+    } catch {
+      handleSetError(
+        todosServiceErrorText[TodosServiceErrors.UNABLE_TO_UPDATE_A_TODO],
+      );
+    } finally {
+      handleRemoveTodoFromLoading(todoId);
+    }
   };
 
-  const handleDeleteTodo = (todoId: Todo['id']) => {
+  const handleDeleteTodo = async (todoId: Todo['id']) => {
     handleAddTodoToLoading(todoId);
     handleRemoveError();
 
-    return todosService
-      .deleTodo(todoId)
-      .then(() => {
-        setTodos(currentTodos =>
-          currentTodos.filter(todo => todo.id !== todoId),
-        );
-      })
-      .catch(err => {
-        handleSetError(
-          todosServiceErrorText[TodosServiceErrors.UNABLE_TO_DELETE_A_TODO],
-        );
-        throw err;
-      })
-      .finally(() => {
-        handleRemoveTodoFromLoading(todoId);
-        if (todoTitleInputRef.current) {
-          todoTitleInputRef.current.focus();
-        }
-      });
+    try {
+      await todosService.deleTodo(todoId);
+      setTodos(currentTodos => currentTodos.filter(todo => todo.id !== todoId));
+    } catch {
+      handleSetError(
+        todosServiceErrorText[TodosServiceErrors.UNABLE_TO_DELETE_A_TODO],
+      );
+    } finally {
+      handleRemoveTodoFromLoading(todoId);
+      if (todoTitleInputRef.current) {
+        todoTitleInputRef.current.focus();
+      }
+    }
   };
 
   const handleBulkDeleteTodos = (todoIds: Todo['id'][]) => {
@@ -150,66 +140,75 @@ export const App: React.FC = () => {
 
   const allTodosCompleted = todos.every(todo => todo.completed);
 
-  const handleToggleAll = () => {
+  const handleToggleAll = async () => {
     const newStatus = !allTodosCompleted;
 
-    todos.forEach(todo => {
-      if (todo.completed !== newStatus) {
-        handleAddTodoToLoading(todo.id);
-        todosService
-          .updateTodoStatus(todo.id, { completed: newStatus })
-          .then(() => {
-            setTodos(currentTodos =>
-              currentTodos.map(t =>
-                t.id === todo.id ? { ...t, completed: newStatus } : t,
-              ),
-            );
-          })
-          .catch(() => {
-            handleSetError(
-              todosServiceErrorText[TodosServiceErrors.UNABLE_TO_UPDATE_A_TODO],
-            );
-          })
-          .finally(() => {
-            handleRemoveTodoFromLoading(todo.id);
-          });
-      }
-    });
-  };
+    handleRemoveError();
 
-  const handleSaveTitle = (todoId: Todo['id'], newTitle: string) => {
-    handleAddTodoToLoading(todoId);
+    const todosToToggle = todos.filter(todo => todo.completed !== newStatus);
 
-    return todosService
-      .updateTodoTitle(todoId, newTitle)
-      .then(() => {
+    if (todosToToggle.length === 0) {
+      return;
+    }
+
+    const updateOperations = todosToToggle.map(async todo => {
+      handleAddTodoToLoading(todo.id);
+
+      try {
+        await todosService.updateTodoStatus(todo.id, { completed: newStatus });
+
         setTodos(currentTodos =>
-          currentTodos.map(todo =>
-            todo.id === todoId ? { ...todo, title: newTitle } : todo,
+          currentTodos.map(t =>
+            t.id === todo.id ? { ...t, completed: newStatus } : t,
           ),
         );
-      })
-      .catch(err => {
+      } catch {
         handleSetError(
           todosServiceErrorText[TodosServiceErrors.UNABLE_TO_UPDATE_A_TODO],
         );
-        throw err;
-      })
-      .finally(() => {
-        handleRemoveTodoFromLoading(todoId);
-      });
+      } finally {
+        handleRemoveTodoFromLoading(todo.id);
+      }
+    });
+
+    await Promise.all(updateOperations);
+  };
+
+  const handleSaveTitle = async (todoId: Todo['id'], newTitle: string) => {
+    handleAddTodoToLoading(todoId);
+    handleRemoveError();
+
+    try {
+      await todosService.updateTodoTitle(todoId, newTitle);
+      setTodos(currentTodos =>
+        currentTodos.map(todo =>
+          todo.id === todoId ? { ...todo, title: newTitle } : todo,
+        ),
+      );
+    } catch (err) {
+      handleSetError(
+        todosServiceErrorText[TodosServiceErrors.UNABLE_TO_UPDATE_A_TODO],
+      );
+      throw err;
+    } finally {
+      handleRemoveTodoFromLoading(todoId);
+    }
   };
 
   useEffect(() => {
-    todosService
-      .getTodos()
-      .then(setTodos)
-      .catch(() => {
+    const loadTodos = async () => {
+      try {
+        const todosFromServer = await todosService.getTodos();
+
+        setTodos(todosFromServer);
+      } catch (err) {
         handleSetError(
           todosServiceErrorText[TodosServiceErrors.UNABLE_TO_LOAD_TODOS],
         );
-      })
-      .finally(() => {});
+      }
+    };
+
+    loadTodos();
   }, [handleSetError]);
 
   const filteredTodos = getFilteredTodos(todos, selectedStatus);
@@ -235,7 +234,7 @@ export const App: React.FC = () => {
         {filteredTodos.length !== 0 && (
           <TodoList
             todos={filteredTodos}
-            isLoading={getIsTodoLoading}
+            isLoading={(todoId: Todo['id']) => loadingTodoIds.includes(todoId)}
             onDelete={handleDeleteTodo}
             onToggleStatus={handleToggleStatus}
             onSaveTitle={handleSaveTitle}

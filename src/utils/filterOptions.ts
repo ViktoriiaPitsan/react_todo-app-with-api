@@ -1,14 +1,4 @@
-export enum Status {
-  ALL = 'all',
-  COMPLETED = 'completed',
-  ACTIVE = 'active',
-}
-
-type FilterOption = {
-  href: string;
-  testId: string;
-  text: string;
-};
+import { Status, FilterOption } from '../types/TodoStatusFilter';
 
 export const TODO_STATUS_FILTER_OPTIONS: Record<Status, FilterOption> = {
   [Status.ALL]: {
